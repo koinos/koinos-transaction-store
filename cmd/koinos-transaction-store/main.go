@@ -89,7 +89,38 @@ func main() {
 	trxStore := trxstore.NewTransactionStore(backend)
 
 	requestHandler.SetRPCHandler(trxStoreRPC, func(rpcType string, data []byte) ([]byte, error) {
-		return nil, errors.New("NYI")
+		req := types.NewTransactionStoreRequest()
+		resp := types.NewTransactionStoreResponse()
+
+		err := json.Unmarshal(data, req)
+		if err != nil {
+			log.Warnf("Received malformed request: %s", string(data))
+			resp.Value = &types.BlockStoreErrorResponse{ErrorText: types.String(err.Error())}
+		} else {
+			log.Debugf("Received RPC request: %s", string(data))
+			var err error
+			switch v := req.Value.(type) {
+			case *types.TransactionStoreReservedRequest:
+				err = errors.New("Rerserved request is not supported")
+				break
+			case *types.GetTransactionsByIDRequest:
+				result, err := trxStore.GetTransactionsByID(v.TransactionIds)
+				if err == nil {
+					resp.Value = &types.GetTransactionsByIDResponse{Transactions: result}
+				}
+			default:
+				err = errors.New("Unknown request")
+			}
+
+			if err != nil {
+				resp.Value = types.TransactionStoreErrorResponse{ErrorText: types.String(err.Error())}
+			}
+		}
+
+		var outputBytes []byte
+		outputBytes, err = json.Marshal(&resp)
+
+		return outputBytes, err
 	})
 
 	requestHandler.SetBroadcastHandler(blockAccept, func(topic string, data []byte) {
