@@ -1,7 +1,6 @@
 package trxstore
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"sync"
@@ -69,7 +68,7 @@ func (handler *TransactionStore) AddIncludedTransaction(tx *types.Transaction, t
 		}
 
 		for _, blockID := range record.ContainingBlocks {
-			if blockID.ID == topology.ID.ID && bytes.Equal(blockID.Digest, topology.ID.Digest) {
+			if blockID.Equals(&topology.ID) {
 				return nil
 			}
 		}

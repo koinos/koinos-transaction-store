@@ -132,10 +132,10 @@ func TestAddTransaction(t *testing.T) {
 			t.Fatal("Wrong transaction returned")
 		}
 		if len(trxs[0].Value.ContainingBlocks) != 1 {
-			t.Fatal("Cointaining block not included")
+			t.Fatal("Containing block not included")
 		}
 		if trxs[0].Value.ContainingBlocks[0].ID != 1 {
-			t.Fatal("Cointaining block not correct")
+			t.Fatal("Containing block not correct")
 		}
 
 		// Test adding an already existing transaction
@@ -159,13 +159,13 @@ func TestAddTransaction(t *testing.T) {
 			t.Fatal("Wrong transaction returned")
 		}
 		if len(trxs[0].Value.ContainingBlocks) != 2 {
-			t.Fatal("Cointaining block not included")
+			t.Fatal("Containing block not included")
 		}
 		if trxs[0].Value.ContainingBlocks[0].ID != 1 {
-			t.Fatal("Cointaining blocks not correct")
+			t.Fatal("Containing blocks not correct")
 		}
 		if trxs[0].Value.ContainingBlocks[1].ID != 2 {
-			t.Fatal("Cointaining blocks not correct")
+			t.Fatal("Containing blocks not correct")
 		}
 
 		// Test adding second transaction

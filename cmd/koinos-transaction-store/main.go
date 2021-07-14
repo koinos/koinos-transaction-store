@@ -101,7 +101,7 @@ func main() {
 			var err error
 			switch v := req.Value.(type) {
 			case *types.TransactionStoreReservedRequest:
-				err = errors.New("Rerserved request is not supported")
+				err = errors.New("Reserved request is not supported")
 				break
 			case *types.GetTransactionsByIDRequest:
 				result, err := trxStore.GetTransactionsByID(v.TransactionIds)
