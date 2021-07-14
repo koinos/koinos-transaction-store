@@ -67,7 +67,12 @@ func (handler *TransactionStore) AddIncludedTransaction(tx *types.Transaction, t
 			return fmt.Errorf("%w, %v", ErrRecordLength, err)
 		}
 
-		// TODO: Check for duplicate blocks
+		for _, blockID := range record.ContainingBlocks {
+			if blockID.Equals(&topology.ID) {
+				return nil
+			}
+		}
+
 		record.ContainingBlocks = append(record.ContainingBlocks, topology.ID)
 		vbValue := record.Serialize(types.NewVariableBlob())
 		err = handler.backend.Put(*vbKey, *vbValue)
@@ -80,15 +85,15 @@ func (handler *TransactionStore) AddIncludedTransaction(tx *types.Transaction, t
 }
 
 // GetTransactionsByID returns transactions by transaction ID
-func (handler *TransactionStore) GetTransactionsByID(trxIDs types.VectorMultihash) (types.VectorOptTransaction, error) {
-	trxs := types.VectorOptTransaction(make([]types.OptTransaction, 0))
+func (handler *TransactionStore) GetTransactionsByID(trxIDs types.VectorMultihash) (types.VectorOptTransactionRecord, error) {
+	trxs := types.VectorOptTransactionRecord(make([]types.OptTransactionRecord, 0))
 
 	handler.rwmutex.RLock()
 	defer handler.rwmutex.RUnlock()
 
 	for _, tid := range trxIDs {
 		vbKey := tid.Serialize(types.NewVariableBlob())
-		optTrx := types.OptTransaction{}
+		optTrx := types.OptTransactionRecord{}
 
 		recordBytes, err := handler.backend.Get(*vbKey)
 		if err != nil {
@@ -98,7 +103,7 @@ func (handler *TransactionStore) GetTransactionsByID(trxIDs types.VectorMultihas
 			vbValue := types.VariableBlob(recordBytes)
 			consumed, record, err := types.DeserializeTransactionRecord(&vbValue)
 			if err == nil && consumed == uint64(len(recordBytes)) {
-				optTrx.Value = &record.Transaction
+				optTrx.Value = record
 			}
 		}
 
