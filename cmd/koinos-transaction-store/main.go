@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -9,11 +8,16 @@ import (
 	"path"
 	"syscall"
 
+	"google.golang.org/protobuf/proto"
+
 	"github.com/dgraph-io/badger"
 	log "github.com/koinos/koinos-log-golang"
 	koinosmq "github.com/koinos/koinos-mq-golang"
+	"github.com/koinos/koinos-proto-golang/koinos"
+	"github.com/koinos/koinos-proto-golang/koinos/broadcast"
+	"github.com/koinos/koinos-proto-golang/koinos/rpc"
+	"github.com/koinos/koinos-proto-golang/koinos/rpc/transaction_store"
 	"github.com/koinos/koinos-transaction-store/internal/trxstore"
-	types "github.com/koinos/koinos-types-golang"
 	util "github.com/koinos/koinos-util-golang"
 	flag "github.com/spf13/pflag"
 )
@@ -89,59 +93,53 @@ func main() {
 	trxStore := trxstore.NewTransactionStore(backend)
 
 	requestHandler.SetRPCHandler(trxStoreRPC, func(rpcType string, data []byte) ([]byte, error) {
-		req := types.NewTransactionStoreRequest()
-		resp := types.NewTransactionStoreResponse()
+		request := &transaction_store.TransactionStoreRequest{}
+		response := &transaction_store.TransactionStoreResponse{}
 
-		err := json.Unmarshal(data, req)
+		err := proto.Unmarshal(data, request)
+
 		if err != nil {
-			log.Warnf("Received malformed request: %s", string(data))
-			resp.Value = &types.BlockStoreErrorResponse{ErrorText: types.String(err.Error())}
+			log.Warnf("Received malformed request: %v", data)
 		} else {
-			log.Debugf("Received RPC request: %s", string(data))
-			var err error
-			switch v := req.Value.(type) {
-			case *types.TransactionStoreReservedRequest:
-				err = errors.New("Reserved request is not supported")
-				break
-			case *types.GetTransactionsByIDRequest:
-				result, err := trxStore.GetTransactionsByID(v.TransactionIds)
-				if err == nil {
-					resp.Value = &types.GetTransactionsByIDResponse{Transactions: result}
+			log.Debugf("Received RPC request: %s", request.String())
+			switch v := request.Request.(type) {
+			case *transaction_store.TransactionStoreRequest_GetTransactionsById:
+				if result, err := trxStore.GetTransactionsByID(v.GetTransactionsById.TransactionIds); err == nil {
+					r := &transaction_store.GetTransactionsByIdResponse{Transactions: result}
+					response.Response = &transaction_store.TransactionStoreResponse_GetTransactionsById{r}
 				}
 			default:
 				err = errors.New("Unknown request")
 			}
-
-			if err != nil {
-				resp.Value = types.TransactionStoreErrorResponse{ErrorText: types.String(err.Error())}
-			}
 		}
 
-		var outputBytes []byte
-		outputBytes, err = json.Marshal(&resp)
+		if err != nil {
+			e := &rpc.ErrorResponse{ErrorText: string(err.Error())}
+			response.Response = &transaction_store.TransactionStoreResponse_TransactionStoreError{e}
+		}
 
-		return outputBytes, err
+		return proto.Marshal(response)
 	})
 
 	requestHandler.SetBroadcastHandler(blockAccept, func(topic string, data []byte) {
-		sub := types.NewBlockAccepted()
-		err := json.Unmarshal(data, sub)
+		submission := &broadcast.BlockAccepted{}
 
-		if err != nil {
-			log.Warnf("Unable to parse koinos.block.accept broadcast: %s", string(data))
+
+		if err := proto.Unmarshal(data, submission); err != nil {
+			log.Warnf("Unable to parse koinos.block.accept broadcast: %v", data)
 			return
 		}
 
-		log.Infof("Received broadcasted block - %s", util.BlockString(&sub.Block))
+		log.Infof("Received broadcasted block - %s", util.BlockString(submission.Block))
 
-		topology := types.BlockTopology{
-			ID:       sub.Block.ID,
-			Height:   sub.Block.Header.Height,
-			Previous: sub.Block.Header.Previous,
+		topology := koinos.BlockTopology{
+			Id:       submission.Block.Id,
+			Height:   submission.Block.Header.Height,
+			Previous: submission.Block.Header.Previous,
 		}
 
-		for _, trx := range sub.Block.Transactions {
-			trxStore.AddIncludedTransaction(&trx, &topology)
+		for _, trx := range submission.Block.Transactions {
+			trxStore.AddIncludedTransaction(trx, &topology)
 		}
 	})
 

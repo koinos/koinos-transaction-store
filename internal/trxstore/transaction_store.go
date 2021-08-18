@@ -1,11 +1,16 @@
 package trxstore
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"sync"
 
-	types "github.com/koinos/koinos-types-golang"
+	"github.com/koinos/koinos-proto-golang/koinos"
+	"github.com/koinos/koinos-proto-golang/koinos/protocol"
+	"github.com/koinos/koinos-proto-golang/koinos/transaction_store"
+
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -13,11 +18,11 @@ const (
 )
 
 var (
+	// ErrSerialization occurs when a type cannot be serialized correctly
+	ErrSerialization = errors.New("error serializing type")
+
 	// ErrDeserialization occurs when a type cannot be deserialized correctly
 	ErrDeserialization = errors.New("error deserializing type")
-
-	// ErrRecordLength occurs when there are hanging bytes after deserialization
-	ErrRecordLength = errors.New("deserialization did not consume all bytes")
 
 	// ErrBackend occurs when there is an error in the backend
 	ErrBackend = errors.New("error in backend")
@@ -35,47 +40,49 @@ func NewTransactionStore(backend TransactionStoreBackend) *TransactionStore {
 }
 
 // AddIncludedTransaction adds a transaction to with the associated block topology
-func (handler *TransactionStore) AddIncludedTransaction(tx *types.Transaction, topology *types.BlockTopology) error {
-	record := types.TransactionRecord{
-		Transaction:      *tx,
-		ContainingBlocks: []types.Multihash{topology.ID},
-	}
-
-	vbKey := tx.ID.Serialize(types.NewVariableBlob())
-
+func (handler *TransactionStore) AddIncludedTransaction(tx *protocol.Transaction, topology *koinos.BlockTopology) error {
 	handler.rwmutex.Lock()
 	defer handler.rwmutex.Unlock()
 
-	recordBytes, err := handler.backend.Get(*vbKey)
+	itemBytes, err := handler.backend.Get(tx.Id)
 	if err != nil {
 		return fmt.Errorf("%w, %v", ErrBackend, err)
 	}
 
-	if len(recordBytes) == 0 {
-		vbValue := record.Serialize(types.NewVariableBlob())
-		err := handler.backend.Put(*vbKey, *vbValue)
+	if len(itemBytes) == 0 {
+		item := transaction_store.TransactionItem{
+			Transaction:      tx,
+			ContainingBlocks: [][]byte{topology.Id},
+		}
+
+		itemBytes, err = proto.Marshal(&item)
+		if err != nil {
+			return fmt.Errorf("%w, %v", ErrSerialization, err)
+		}
+
+		err = handler.backend.Put(tx.Id, itemBytes)
 		if err != nil {
 			return fmt.Errorf("%w, %v", ErrBackend, err)
 		}
 	} else {
-		vbExistingValue := types.VariableBlob(recordBytes)
-		consumed, record, err := types.DeserializeTransactionRecord(&vbExistingValue)
-		if err != nil {
+		item := &transaction_store.TransactionItem{}
+		if err := proto.Unmarshal(itemBytes, item); err != nil {
 			return fmt.Errorf("%w, %v", ErrDeserialization, err)
 		}
-		if consumed != uint64(len(recordBytes)) {
-			return fmt.Errorf("%w, %v", ErrRecordLength, err)
-		}
 
-		for _, blockID := range record.ContainingBlocks {
-			if blockID.Equals(&topology.ID) {
+		for _, blockID := range item.ContainingBlocks {
+			if bytes.Equal(blockID, topology.Id) {
 				return nil
 			}
 		}
 
-		record.ContainingBlocks = append(record.ContainingBlocks, topology.ID)
-		vbValue := record.Serialize(types.NewVariableBlob())
-		err = handler.backend.Put(*vbKey, *vbValue)
+		item.ContainingBlocks = append(item.ContainingBlocks, topology.Id)
+		itemBytes, err = proto.Marshal(item)
+		if err != nil {
+			fmt.Errorf("%w, %v", ErrSerialization, err)
+		}
+
+		err = handler.backend.Put(tx.Id, itemBytes)
 		if err != nil {
 			return fmt.Errorf("%w, %v", ErrBackend, err)
 		}
@@ -85,29 +92,25 @@ func (handler *TransactionStore) AddIncludedTransaction(tx *types.Transaction, t
 }
 
 // GetTransactionsByID returns transactions by transaction ID
-func (handler *TransactionStore) GetTransactionsByID(trxIDs types.VectorMultihash) (types.VectorOptTransactionRecord, error) {
-	trxs := types.VectorOptTransactionRecord(make([]types.OptTransactionRecord, 0))
+func (handler *TransactionStore) GetTransactionsByID(trxIDs [][]byte) ([]*transaction_store.TransactionItem, error) {
+	trxs := make([]*transaction_store.TransactionItem, 0)
 
 	handler.rwmutex.RLock()
 	defer handler.rwmutex.RUnlock()
 
 	for _, tid := range trxIDs {
-		vbKey := tid.Serialize(types.NewVariableBlob())
-		optTrx := types.OptTransactionRecord{}
-
-		recordBytes, err := handler.backend.Get(*vbKey)
+		itemBytes, err := handler.backend.Get(tid)
 		if err != nil {
 			return nil, fmt.Errorf("%w, %v", ErrBackend, err)
 		}
-		if len(recordBytes) != 0 {
-			vbValue := types.VariableBlob(recordBytes)
-			consumed, record, err := types.DeserializeTransactionRecord(&vbValue)
-			if err == nil && consumed == uint64(len(recordBytes)) {
-				optTrx.Value = record
+		if len(itemBytes) != 0 {
+			item := &transaction_store.TransactionItem{}
+			if err := proto.Unmarshal(itemBytes, item); err != nil {
+				return nil, fmt.Errorf("%w, %v", ErrDeserialization, err)
 			}
-		}
 
-		trxs = append(trxs, optTrx)
+			trxs = append(trxs, item)
+		}
 	}
 
 	return trxs, nil
