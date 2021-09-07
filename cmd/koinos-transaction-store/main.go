@@ -106,7 +106,7 @@ func main() {
 			case *transaction_store.TransactionStoreRequest_GetTransactionsById:
 				if result, err := trxStore.GetTransactionsByID(v.GetTransactionsById.TransactionIds); err == nil {
 					r := &transaction_store.GetTransactionsByIdResponse{Transactions: result}
-					response.Response = &transaction_store.TransactionStoreResponse_GetTransactionsById{r}
+					response.Response = &transaction_store.TransactionStoreResponse_GetTransactionsById{GetTransactionsById: r}
 				}
 			default:
 				err = errors.New("Unknown request")
@@ -114,8 +114,8 @@ func main() {
 		}
 
 		if err != nil {
-			e := &rpc.ErrorResponse{ErrorText: string(err.Error())}
-			response.Response = &transaction_store.TransactionStoreResponse_TransactionStoreError{e}
+			e := &rpc.ErrorResponse{Message: string(err.Error())}
+			response.Response = &transaction_store.TransactionStoreResponse_Error{Error: e}
 		}
 
 		return proto.Marshal(response)
@@ -123,7 +123,6 @@ func main() {
 
 	requestHandler.SetBroadcastHandler(blockAccept, func(topic string, data []byte) {
 		submission := &broadcast.BlockAccepted{}
-
 
 		if err := proto.Unmarshal(data, submission); err != nil {
 			log.Warnf("Unable to parse koinos.block.accept broadcast: %v", data)
