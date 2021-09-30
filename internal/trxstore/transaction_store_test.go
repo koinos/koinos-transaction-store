@@ -1,6 +1,7 @@
 package trxstore
 
 import (
+	"bytes"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -8,7 +9,8 @@ import (
 
 	"github.com/dgraph-io/badger"
 
-	types "github.com/koinos/koinos-types-golang"
+	"github.com/koinos/koinos-proto-golang/koinos"
+	"github.com/koinos/koinos-proto-golang/koinos/protocol"
 )
 
 const (
@@ -108,98 +110,80 @@ func TestAddTransaction(t *testing.T) {
 		store := NewTransactionStore(b)
 
 		// Test adding a transaction
-		trx := types.NewTransaction()
-		trx.ID.ID = 1
-		topology := types.NewBlockTopology()
-		topology.ID.ID = 1
+		trx := &protocol.Transaction{}
+		trx.Id = []byte{1}
+		topology := &koinos.BlockTopology{}
+		topology.Id = []byte{1}
 
 		err := store.AddIncludedTransaction(trx, topology)
 		if err != nil {
 			t.Fatal("Error adding transaction: ", err)
 		}
 
-		trxs, err := store.GetTransactionsByID([]types.Multihash{{ID: 1, Digest: *types.NewVariableBlob()}})
+		trxs, err := store.GetTransactionsByID([][]byte{{1}})
 		if err != nil {
 			t.Fatal("Error getting transaction: ", err)
 		}
 		if len(trxs) != 1 {
 			t.Fatal("Incorrect number of transactions returned")
 		}
-		if trxs[0].Value == nil {
-			t.Fatal("Expected transaction not returned")
-		}
-		if trxs[0].Value.Transaction.ID.ID != 1 {
+		if !bytes.Equal(trxs[0].Transaction.Id, []byte{1}) {
 			t.Fatal("Wrong transaction returned")
 		}
-		if len(trxs[0].Value.ContainingBlocks) != 1 {
+		if len(trxs[0].ContainingBlocks) != 1 {
 			t.Fatal("Containing block not included")
 		}
-		if trxs[0].Value.ContainingBlocks[0].ID != 1 {
+		if !bytes.Equal(trxs[0].ContainingBlocks[0], []byte{1}) {
 			t.Fatal("Containing block not correct")
 		}
 
 		// Test adding an already existing transaction
-		topology.ID.ID = 2
+		topology.Id = []byte{2}
 		err = store.AddIncludedTransaction(trx, topology)
 		if err != nil {
 			t.Fatal("Error adding transaction: ", err)
 		}
 
-		trxs, err = store.GetTransactionsByID([]types.Multihash{{ID: 1, Digest: *types.NewVariableBlob()}})
+		trxs, err = store.GetTransactionsByID([][]byte{{1}})
 		if err != nil {
 			t.Fatal("Error getting transaction: ", err)
 		}
 		if len(trxs) != 1 {
 			t.Fatal("Incorrect number of transactions returned")
 		}
-		if trxs[0].Value == nil {
-			t.Fatal("Expected transaction not returned")
-		}
-		if trxs[0].Value.Transaction.ID.ID != 1 {
+		if !bytes.Equal(trxs[0].Transaction.Id, []byte{1}) {
 			t.Fatal("Wrong transaction returned")
 		}
-		if len(trxs[0].Value.ContainingBlocks) != 2 {
+		if len(trxs[0].ContainingBlocks) != 2 {
 			t.Fatal("Containing block not included")
 		}
-		if trxs[0].Value.ContainingBlocks[0].ID != 1 {
-			t.Fatal("Containing blocks not correct")
+		if !bytes.Equal(trxs[0].ContainingBlocks[0], []byte{1}) {
+			t.Fatal("Containing block not correct")
 		}
-		if trxs[0].Value.ContainingBlocks[1].ID != 2 {
-			t.Fatal("Containing blocks not correct")
+		if !bytes.Equal(trxs[0].ContainingBlocks[1], []byte{2}) {
+			t.Fatal("Containing block not correct")
 		}
 
 		// Test adding second transaction
-		trx.ID.ID = 2
+		trx.Id = []byte{2}
 		err = store.AddIncludedTransaction(trx, topology)
 		if err != nil {
 			t.Fatal("Error adding transaction: ", err)
 		}
 
-		trxs, err = store.GetTransactionsByID([]types.Multihash{
-			{ID: 1, Digest: *types.NewVariableBlob()},
-			{ID: 2, Digest: *types.NewVariableBlob()},
-			{ID: 3, Digest: *types.NewVariableBlob()}})
+		trxs, err = store.GetTransactionsByID([][]byte{{1},{2},{3}})
 
 		if err != nil {
 			t.Fatal("Error getting transaction: ", err)
 		}
-		if len(trxs) != 3 {
+		if len(trxs) != 2 {
 			t.Fatal("Incorrect number of transactions returned")
 		}
-		if trxs[0].Value == nil {
-			t.Fatal("Expected transaction not returned")
-		}
-		if trxs[0].Value.Transaction.ID.ID != 1 {
+		if !bytes.Equal(trxs[0].Transaction.Id, []byte{1}) {
 			t.Fatal("Wrong transaction returned")
 		}
-		if trxs[1].Value == nil {
-			t.Fatal("Expected transaction not returned")
-		}
-		if trxs[1].Value.Transaction.ID.ID != 2 {
+		if !bytes.Equal(trxs[1].Transaction.Id, []byte{2}) {
 			t.Fatal("Wrong transaction returned")
-		}
-		if trxs[2].Value != nil {
-			t.Fatal("Unexpected transaction returned")
 		}
 
 		CloseBackend(b)
@@ -208,17 +192,17 @@ func TestAddTransaction(t *testing.T) {
 	// Test error backend
 	{
 		store := NewTransactionStore(&ErrorBackend{})
-		trx := types.NewTransaction()
-		trx.ID.ID = 1
-		topology := types.NewBlockTopology()
-		topology.ID.ID = 1
+		trx := &protocol.Transaction{}
+		trx.Id = []byte{1}
+		topology := &koinos.BlockTopology{}
+		topology.Id = []byte{1}
 
 		err := store.AddIncludedTransaction(trx, topology)
 		if !errors.Is(err, ErrBackend) {
 			t.Fatal("Got unexpected error adding transaction: ", err)
 		}
 
-		_, err = store.GetTransactionsByID([]types.Multihash{{ID: 1}})
+		_, err = store.GetTransactionsByID([][]byte{{1}})
 		if !errors.Is(err, ErrBackend) {
 			t.Fatal("Got unexpected error adding transaction: ", err)
 		}
@@ -227,27 +211,13 @@ func TestAddTransaction(t *testing.T) {
 	// Test bad record
 	{
 		store := NewTransactionStore(&BadBackend{})
-		trx := types.NewTransaction()
-		trx.ID.ID = 1
-		topology := types.NewBlockTopology()
-		topology.ID.ID = 1
+		trx := &protocol.Transaction{}
+		trx.Id = []byte{1}
+		topology := &koinos.BlockTopology{}
+		topology.Id = []byte{1}
 
 		err := store.AddIncludedTransaction(trx, topology)
 		if !errors.Is(err, ErrDeserialization) {
-			t.Fatal("Got unexpected error adding transaction: ", err)
-		}
-	}
-
-	// Test too long record
-	{
-		store := NewTransactionStore(&LongBackend{})
-		trx := types.NewTransaction()
-		trx.ID.ID = 1
-		topology := types.NewBlockTopology()
-		topology.ID.ID = 1
-
-		err := store.AddIncludedTransaction(trx, topology)
-		if !errors.Is(err, ErrRecordLength) {
 			t.Fatal("Got unexpected error adding transaction: ", err)
 		}
 	}
