@@ -27,6 +27,7 @@ const (
 	amqpOption       = "amqp"
 	instanceIDOption = "instance-id"
 	logLevelOption   = "log-level"
+	resetOption      = "reset"
 )
 
 const (
@@ -34,6 +35,7 @@ const (
 	amqpDefault       = "amqp://guest:guest@localhost:5672/"
 	instanceIDDefault = ""
 	logLevelDefault   = "info"
+	resetDefault      = false
 )
 
 const (
@@ -59,6 +61,7 @@ func main() {
 	*amqp = util.GetStringOption(amqpOption, amqpDefault, *amqp, yamlConfig.TransactionStore, yamlConfig.Global)
 	*logLevel = util.GetStringOption(logLevelOption, logLevelDefault, *logLevel, yamlConfig.TransactionStore, yamlConfig.Global)
 	*instanceID = util.GetStringOption(instanceIDOption, util.GenerateBase58ID(5), *instanceID, yamlConfig.TransactionStore, yamlConfig.Global)
+	*reset = util.GetBoolOption(resetOption, resetDefault, *reset, yamlConfig.TransactionStore, yamlConfig.Global)
 
 	appID := fmt.Sprintf("%s.%s", appName, *instanceID)
 
@@ -104,12 +107,17 @@ func main() {
 			log.Debugf("Received RPC request: %s", request.String())
 			switch v := request.Request.(type) {
 			case *transaction_store.TransactionStoreRequest_GetTransactionsById:
+				if v.GetTransactionsById.TransactionIds == nil {
+					err = errors.New("expected field transaction_ids was nil")
+					break
+				}
+
 				if result, err := trxStore.GetTransactionsByID(v.GetTransactionsById.TransactionIds); err == nil {
 					r := &transaction_store.GetTransactionsByIdResponse{Transactions: result}
 					response.Response = &transaction_store.TransactionStoreResponse_GetTransactionsById{GetTransactionsById: r}
 				}
 			default:
-				err = errors.New("Unknown request")
+				err = errors.New("unknown request")
 			}
 		}
 
