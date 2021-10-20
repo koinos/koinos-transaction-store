@@ -99,6 +99,9 @@ func (handler *TransactionStore) GetTransactionsByID(trxIDs [][]byte) ([]*transa
 	defer handler.rwmutex.RUnlock()
 
 	for _, tid := range trxIDs {
+		if tid == nil {
+			return nil, errors.New("transaction id was nil")
+		}
 		itemBytes, err := handler.backend.Get(tid)
 		if err != nil {
 			return nil, fmt.Errorf("%w, %v", ErrBackend, err)
