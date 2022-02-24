@@ -3,6 +3,12 @@ FROM golang:1.16.2-alpine as builder
 ADD . /koinos-transaction-store
 WORKDIR /koinos-transaction-store
 
+RUN apk update && \
+    apk add \
+        gcc \
+        musl-dev \
+        linux-headers
+
 RUN go get ./... && \
     go build -o koinos_transaction_store cmd/koinos-transaction-store/main.go
 
