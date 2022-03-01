@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -137,7 +138,11 @@ func main() {
 			return
 		}
 
-		log.Infof("Received broadcasted block - %s", util.BlockString(submission.Block))
+		if submission.GetLive() {
+			log.Infof("Received broadcasted block - Height: %d, ID: 0x%s", submission.Block.Header.Height, hex.EncodeToString(submission.Block.Id))
+		} else if submission.GetBlock().GetHeader().GetHeight()%1000 == 0 {
+			log.Infof("Sync block progress - Height: %d, ID: 0x%s", submission.Block.Header.Height, hex.EncodeToString(submission.Block.Id))
+		}
 
 		topology := koinos.BlockTopology{
 			Id:       submission.Block.Id,
