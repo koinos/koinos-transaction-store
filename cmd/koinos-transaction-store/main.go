@@ -151,7 +151,10 @@ func main() {
 		}
 
 		for _, trx := range submission.Block.Transactions {
-			trxStore.AddIncludedTransaction(trx, &topology)
+			if err := trxStore.AddIncludedTransaction(trx, &topology); err != nil {
+				log.Warnf("could not add included transaction: %s", err)
+			}
+
 		}
 	})
 

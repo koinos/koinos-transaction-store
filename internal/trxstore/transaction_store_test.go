@@ -25,7 +25,6 @@ func NewBackend(backendType int) TransactionStoreBackend {
 	switch backendType {
 	case MapBackendType:
 		backend = NewMapBackend()
-		break
 	case BadgerBackendType:
 		dirname, err := ioutil.TempDir(os.TempDir(), "trxstore-test-*")
 		if err != nil {
@@ -33,7 +32,6 @@ func NewBackend(backendType int) TransactionStoreBackend {
 		}
 		opts := badger.DefaultOptions(dirname)
 		backend = NewBadgerBackend(opts)
-		break
 	default:
 		panic("unknown backend type")
 	}
@@ -46,7 +44,6 @@ func CloseBackend(b interface{}) {
 		break
 	case *BadgerBackend:
 		t.Close()
-		break
 	default:
 		panic("unknown backend type")
 	}
