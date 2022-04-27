@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v3"
 
 	"github.com/koinos/koinos-proto-golang/koinos"
 	"github.com/koinos/koinos-proto-golang/koinos/protocol"
@@ -171,7 +171,7 @@ func TestAddTransaction(t *testing.T) {
 			t.Fatal("Error adding transaction: ", err)
 		}
 
-		trxs, err = store.GetTransactionsByID([][]byte{{1},{2},{3}})
+		trxs, err = store.GetTransactionsByID([][]byte{{1}, {2}, {3}})
 
 		if err != nil {
 			t.Fatal("Error getting transaction: ", err)
