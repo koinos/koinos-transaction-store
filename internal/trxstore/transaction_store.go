@@ -13,10 +13,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const (
-	highestBlockKey = 0x01
-)
-
 var (
 	// ErrSerialization occurs when a type cannot be serialized correctly
 	ErrSerialization = errors.New("error serializing type")
@@ -79,7 +75,7 @@ func (handler *TransactionStore) AddIncludedTransaction(tx *protocol.Transaction
 		item.ContainingBlocks = append(item.ContainingBlocks, topology.Id)
 		itemBytes, err = proto.Marshal(item)
 		if err != nil {
-			fmt.Errorf("%w, %v", ErrSerialization, err)
+			return fmt.Errorf("%w, %v", ErrSerialization, err)
 		}
 
 		err = handler.backend.Put(tx.Id, itemBytes)

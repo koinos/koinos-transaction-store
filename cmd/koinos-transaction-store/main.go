@@ -11,7 +11,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/dgraph-io/badger"
+	"github.com/dgraph-io/badger/v3"
 	log "github.com/koinos/koinos-log-golang"
 	koinosmq "github.com/koinos/koinos-mq-golang"
 	"github.com/koinos/koinos-proto-golang/koinos"
@@ -151,7 +151,10 @@ func main() {
 		}
 
 		for _, trx := range submission.Block.Transactions {
-			trxStore.AddIncludedTransaction(trx, &topology)
+			if err := trxStore.AddIncludedTransaction(trx, &topology); err != nil {
+				log.Warnf("could not add included transaction: %s", err)
+			}
+
 		}
 	})
 
