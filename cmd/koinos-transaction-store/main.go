@@ -54,7 +54,7 @@ func main() {
 
 	var baseDir string
 
-	baseDir = flag.StringP(basedirOption, "d", basedirDefault, "Koinos base directory")
+	baseDir = *flag.StringP(basedirOption, "d", basedirDefault, "Koinos base directory")
 	amqp := flag.StringP(amqpOption, "a", "", "AMQP server URL")
 	reset := flag.BoolP("reset", "r", false, "Reset the database")
 	instanceID := flag.StringP(instanceIDOption, "i", instanceIDDefault, "The instance ID to identify this service")
