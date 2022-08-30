@@ -259,13 +259,18 @@ github.com/koinos/koinos-mq-golang v0.0.0-20211026183607-441fb7106dd3 h1:vr3BM+X
 github.com/koinos/koinos-mq-golang v0.0.0-20211026183607-441fb7106dd3/go.mod h1:EFk+fuUL5ezbaWsGJ2U0KlzbgkflwRv96az8dEVe16I=
 github.com/koinos/koinos-mq-golang v0.0.0-20220824200525-0230763309f3 h1:Ii0VZ29D7IL6DRuw/ySvj4KwLLD/pzRmgUUa9XpKJy0=
 github.com/koinos/koinos-mq-golang v0.0.0-20220824200525-0230763309f3/go.mod h1:EFk+fuUL5ezbaWsGJ2U0KlzbgkflwRv96az8dEVe16I=
+github.com/koinos/koinos-mq-golang v0.0.0-20220830164448-bba18599c018 h1:NmPS7s+jFw5bGZrMcH4Hc2k9GoaqTFmKI6JH+YRltsk=
+github.com/koinos/koinos-mq-golang v0.0.0-20220830164448-bba18599c018/go.mod h1:EFk+fuUL5ezbaWsGJ2U0KlzbgkflwRv96az8dEVe16I=
 github.com/koinos/koinos-proto-golang v0.2.1-0.20220224180227-6fbc5fe4a89a/go.mod h1:ZonOOdmZcuEbRdOqqdfYRA2I4szYHy5aKzUveMWXBog=
 github.com/koinos/koinos-proto-golang v0.2.1-0.20220301021801-03b3d905260d h1:ATQlbm+WXmeju484GXYEgjJOcfPz8c6YErpW8LwgS+U=
 github.com/koinos/koinos-proto-golang v0.2.1-0.20220301021801-03b3d905260d/go.mod h1:ZonOOdmZcuEbRdOqqdfYRA2I4szYHy5aKzUveMWXBog=
+github.com/koinos/koinos-proto-golang v0.3.1-0.20220708180354-16481ac5469c/go.mod h1:ZonOOdmZcuEbRdOqqdfYRA2I4szYHy5aKzUveMWXBog=
 github.com/koinos/koinos-proto-golang v0.3.1-0.20220802205931-319ee3a6b490 h1:rs9mgcd3pvVviWDUey8kcpHPcUaWzbZfn/rK8TN3VZc=
 github.com/koinos/koinos-proto-golang v0.3.1-0.20220802205931-319ee3a6b490/go.mod h1:ZonOOdmZcuEbRdOqqdfYRA2I4szYHy5aKzUveMWXBog=
 github.com/koinos/koinos-util-golang v0.0.0-20220224193402-85a6df362833 h1:7H/Rwdt4VrbW6O3R0WIKbcrUE07vstzOb+xB60sS0PI=
 github.com/koinos/koinos-util-golang v0.0.0-20220224193402-85a6df362833/go.mod h1:0+oSa/Ml9+INjfAGubMtKNOq+e4a/OoEz7GfaQPN/P8=
+github.com/koinos/koinos-util-golang v0.0.0-20220830161833-76700a84be69 h1:ub2YMFWL1JZr4iXvIbC/grIqRHRqNoMEa1zQHThNwRE=
+github.com/koinos/koinos-util-golang v0.0.0-20220830161833-76700a84be69/go.mod h1:5Va8lbIAGD886tlNL1AT5LB3ND7uvmivKODQ2p90fqI=
 github.com/konsorten/go-windows-terminal-sequences v1.0.1/go.mod h1:T0+1ngSBFLxvqU3pZ+m/2kptfBszLMUkC4ZK/EgS/cQ=
 github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515/go.mod h1:+0opPa2QZZtGFBFZlji/RkVcI2GknAs/DXo4wKdlNEc=
 github.com/kr/pretty v0.1.0 h1:L/CwN0zerZDmRFUapSPitk6f+Q3+0za1rQkzVuMiMFI=
@@ -406,6 +411,7 @@ github.com/willf/bitset v1.1.3/go.mod h1:RjeCKbqT1RxIR/KWY6phxZiaY1IyutSBfGjNPyS
 github.com/xlab/treeprint v0.0.0-20180616005107-d6fb6747feb6/go.mod h1:ce1O1j6UtZfjr22oyGxGLbauSBp2YVXpARAosm7dHBg=
 github.com/xordataexchange/crypt v0.0.3-0.20170626215501-b2862e3d0a77/go.mod h1:aYKd//L2LvnjZzWKhF00oedf4jCCReLcmhLdhm1A27Q=
 github.com/ybbus/jsonrpc/v2 v2.1.6/go.mod h1:rIuG1+ORoiqocf9xs/v+ecaAVeo3zcZHQgInyKFMeg0=
+github.com/ybbus/jsonrpc/v3 v3.1.1/go.mod h1:NJ8vURh8jndl+F1dVplHr538HNnwnV89sEhcDsZL/bw=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 github.com/yuin/goldmark v1.2.1/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
