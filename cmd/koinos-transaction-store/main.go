@@ -1,12 +1,14 @@
 package main
 
 import (
+	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"os/signal"
 	"path"
+	"runtime"
 	"syscall"
 
 	"google.golang.org/protobuf/proto"
@@ -29,6 +31,7 @@ const (
 	instanceIDOption = "instance-id"
 	logLevelOption   = "log-level"
 	resetOption      = "reset"
+	jobsOption       = "jobs"
 )
 
 const (
@@ -47,35 +50,50 @@ const (
 )
 
 func main() {
-	var baseDir = flag.StringP(basedirOption, "d", basedirDefault, "the base directory")
-	var amqp = flag.StringP(amqpOption, "a", "", "AMQP server URL")
-	var reset = flag.BoolP("reset", "r", false, "reset the database")
+	jobsDefault := runtime.NumCPU()
+
+	var baseDir string
+
+	baseDirPtr := flag.StringP(basedirOption, "d", basedirDefault, "Koinos base directory")
+	amqp := flag.StringP(amqpOption, "a", "", "AMQP server URL")
+	reset := flag.BoolP("reset", "r", false, "Reset the database")
 	instanceID := flag.StringP(instanceIDOption, "i", instanceIDDefault, "The instance ID to identify this service")
 	logLevel := flag.StringP(logLevelOption, "v", logLevelDefault, "The log filtering level (debug, info, warn, error)")
+	jobs := flag.IntP(jobsOption, "j", jobsDefault, "Number of RPC jobs to run")
 
 	flag.Parse()
 
-	*baseDir = util.InitBaseDir(*baseDir)
+	baseDir, err := util.InitBaseDir(*baseDirPtr)
+	if err != nil {
+		fmt.Printf("Could not initialize base directory '%v'\n", baseDir)
+		os.Exit(1)
+	}
 
-	yamlConfig := util.InitYamlConfig(*baseDir)
+	yamlConfig := util.InitYamlConfig(baseDir)
 
 	*amqp = util.GetStringOption(amqpOption, amqpDefault, *amqp, yamlConfig.TransactionStore, yamlConfig.Global)
 	*logLevel = util.GetStringOption(logLevelOption, logLevelDefault, *logLevel, yamlConfig.TransactionStore, yamlConfig.Global)
 	*instanceID = util.GetStringOption(instanceIDOption, util.GenerateBase58ID(5), *instanceID, yamlConfig.TransactionStore, yamlConfig.Global)
 	*reset = util.GetBoolOption(resetOption, resetDefault, *reset, yamlConfig.TransactionStore, yamlConfig.Global)
+	*jobs = util.GetIntOption(jobsOption, jobsDefault, *jobs, yamlConfig.TransactionStore, yamlConfig.Global)
 
 	appID := fmt.Sprintf("%s.%s", appName, *instanceID)
 
 	// Initialize logger
-	logFilename := path.Join(util.GetAppDir(*baseDir, appName), logDir, "block_store.log")
-	err := log.InitLogger(*logLevel, false, logFilename, appID)
+	logFilename := path.Join(util.GetAppDir(baseDir, appName), logDir, "block_store.log")
+	err = log.InitLogger(*logLevel, false, logFilename, appID)
 	if err != nil {
 		panic(fmt.Sprintf("Invalid log-level: %s. Please choose one of: debug, info, warn, error", *logLevel))
 	}
 
 	// Costruct the db directory and ensure it exists
-	dbDir := path.Join(util.GetAppDir((*baseDir), appName), "db")
-	util.EnsureDir(dbDir)
+	dbDir := path.Join(util.GetAppDir((baseDir), appName), "db")
+	err = util.EnsureDir(dbDir)
+	if err != nil {
+		log.Errorf("Could not create database folder %v", dbDir)
+		os.Exit(1)
+	}
+
 	log.Infof("Opening database at %s", dbDir)
 
 	var opts = badger.DefaultOptions(dbDir)
@@ -91,9 +109,7 @@ func main() {
 		}
 	}
 
-	defer backend.Close()
-
-	requestHandler := koinosmq.NewRequestHandler(*amqp)
+	requestHandler := koinosmq.NewRequestHandler(*amqp, uint(*jobs))
 	trxStore := trxstore.NewTransactionStore(backend)
 
 	requestHandler.SetRPCHandler(trxStoreRPC, func(rpcType string, data []byte) ([]byte, error) {
@@ -158,11 +174,14 @@ func main() {
 		}
 	})
 
-	requestHandler.Start()
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	requestHandler.Start(ctx)
 
 	// Wait for a SIGINT or SIGTERM signal
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
 	log.Info("Shutting down node...")
+	ctxCancel()
+	backend.Close()
 }
