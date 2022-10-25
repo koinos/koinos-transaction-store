@@ -9,7 +9,9 @@ import (
 	"os/signal"
 	"path"
 	"runtime"
+	"sync/atomic"
 	"syscall"
+	"time"
 
 	"google.golang.org/protobuf/proto"
 
@@ -80,7 +82,7 @@ func main() {
 	appID := fmt.Sprintf("%s.%s", appName, *instanceID)
 
 	// Initialize logger
-	logFilename := path.Join(util.GetAppDir(baseDir, appName), logDir, appName + ".log")
+	logFilename := path.Join(util.GetAppDir(baseDir, appName), logDir, appName+".log")
 	err = log.InitLogger(*logLevel, false, logFilename, appID)
 	if err != nil {
 		panic(fmt.Sprintf("Invalid log-level: %s. Please choose one of: debug, info, warn, error", *logLevel))
@@ -146,6 +148,8 @@ func main() {
 		return proto.Marshal(response)
 	})
 
+	var recentTransactions uint32
+
 	requestHandler.SetBroadcastHandler(blockAccept, func(topic string, data []byte) {
 		submission := &broadcast.BlockAccepted{}
 
@@ -155,7 +159,7 @@ func main() {
 		}
 
 		if submission.GetLive() {
-			log.Infof("Received broadcasted block - Height: %d, ID: 0x%s", submission.Block.Header.Height, hex.EncodeToString(submission.Block.Id))
+			log.Debugf("Received broadcasted block - Height: %d, ID: 0x%s", submission.Block.Header.Height, hex.EncodeToString(submission.Block.Id))
 		} else if submission.GetBlock().GetHeader().GetHeight()%1000 == 0 {
 			log.Infof("Sync block progress - Height: %d, ID: 0x%s", submission.Block.Header.Height, hex.EncodeToString(submission.Block.Id))
 		}
@@ -169,6 +173,8 @@ func main() {
 		for _, trx := range submission.Block.Transactions {
 			if err := trxStore.AddIncludedTransaction(trx, &topology); err != nil {
 				log.Warnf("could not add included transaction: %s", err)
+			} else {
+				atomic.AddUint32(&recentTransactions, 1)
 			}
 
 		}
@@ -176,6 +182,21 @@ func main() {
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
 	requestHandler.Start(ctx)
+
+	go func() {
+		for {
+			select {
+			case <-time.After(60 * time.Second):
+				NumTransactions := atomic.SwapUint32(&recentTransactions, 0)
+
+				if NumTransactions > 0 {
+					log.Infof("Recently added %v transaction(s)", NumTransactions)
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	// Wait for a SIGINT or SIGTERM signal
 	ch := make(chan os.Signal, 1)
