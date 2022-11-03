@@ -33,7 +33,11 @@ const (
 	instanceIDOption = "instance-id"
 	logLevelOption   = "log-level"
 	resetOption      = "reset"
+<<<<<<< Updated upstream
 	jobsOption       = "jobs"
+=======
+	versionOption    = "version"
+>>>>>>> Stashed changes
 )
 
 const (
@@ -51,6 +55,15 @@ const (
 	logDir      = "logs"
 )
 
+// Version display values
+const (
+	DisplayAppName = "Koinos Transaction Store"
+	Version        = "v1.0.0"
+)
+
+// Gets filled in by the linker
+var Commit string
+
 func main() {
 	jobsDefault := runtime.NumCPU()
 
@@ -60,10 +73,15 @@ func main() {
 	amqp := flag.StringP(amqpOption, "a", "", "AMQP server URL")
 	reset := flag.BoolP("reset", "r", false, "Reset the database")
 	instanceID := flag.StringP(instanceIDOption, "i", instanceIDDefault, "The instance ID to identify this service")
-	logLevel := flag.StringP(logLevelOption, "v", logLevelDefault, "The log filtering level (debug, info, warn, error)")
+	logLevel := flag.StringP(logLevelOption, "l", logLevelDefault, "The log filtering level (debug, info, warn, error)")
 	jobs := flag.IntP(jobsOption, "j", jobsDefault, "Number of RPC jobs to run")
 
 	flag.Parse()
+
+	if *version {
+		fmt.Println(makeVersionString())
+		os.Exit(0)
+	}
 
 	baseDir, err := util.InitBaseDir(*baseDirPtr)
 	if err != nil {
@@ -87,6 +105,8 @@ func main() {
 	if err != nil {
 		panic(fmt.Sprintf("Invalid log-level: %s. Please choose one of: debug, info, warn, error", *logLevel))
 	}
+
+	log.Info(makeVersionString())
 
 	// Costruct the db directory and ensure it exists
 	dbDir := path.Join(util.GetAppDir((baseDir), appName), "db")
@@ -205,4 +225,13 @@ func main() {
 	log.Info("Shutting down node...")
 	ctxCancel()
 	backend.Close()
+}
+
+func makeVersionString() string {
+	commitString := ""
+	if len(Commit) >= 8 {
+		commitString = fmt.Sprintf("(%s)", Commit[0:8])
+	}
+
+	return fmt.Sprintf("%s %s %s", DisplayAppName, Version, commitString)
 }
