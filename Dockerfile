@@ -10,7 +10,7 @@ RUN apk update && \
         linux-headers
 
 RUN go get ./... && \
-    go build -o koinos_transaction_store cmd/koinos-transaction-store/main.go
+    go build -ldflags="-X main.Commit=$(git rev-parse HEAD)" -o koinos_transaction_store cmd/koinos-transaction-store/main.go
 
 FROM alpine:latest
 COPY --from=builder /koinos-transaction-store/koinos_transaction_store /usr/local/bin
