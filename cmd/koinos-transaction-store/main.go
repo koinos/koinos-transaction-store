@@ -33,11 +33,8 @@ const (
 	instanceIDOption = "instance-id"
 	logLevelOption   = "log-level"
 	resetOption      = "reset"
-<<<<<<< Updated upstream
 	jobsOption       = "jobs"
-=======
 	versionOption    = "version"
->>>>>>> Stashed changes
 )
 
 const (
@@ -75,6 +72,7 @@ func main() {
 	instanceID := flag.StringP(instanceIDOption, "i", instanceIDDefault, "The instance ID to identify this service")
 	logLevel := flag.StringP(logLevelOption, "l", logLevelDefault, "The log filtering level (debug, info, warn, error)")
 	jobs := flag.IntP(jobsOption, "j", jobsDefault, "Number of RPC jobs to run")
+	version := flag.BoolP(versionOption, "v", false, "Print version and exit")
 
 	flag.Parse()
 
