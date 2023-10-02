@@ -57,7 +57,7 @@ const (
 // Version display values
 const (
 	DisplayAppName = "Koinos Transaction Store"
-	Version        = "v1.0.0"
+	Version        = "v1.1.0"
 )
 
 // Gets filled in by the linker
@@ -107,7 +107,7 @@ func main() {
 
 	err = log.InitLogger(appName, *instanceID, *logLevel, *logDir, *logColor)
 	if err != nil {
-		panic(fmt.Sprintf("Invalid log-level: %s. Please choose one of: debug, info, warn, error", *logLevel))
+		panic(fmt.Sprintf("Invalid log-level: %s. Please choose one of: debug, info, warning, error", *logLevel))
 	}
 
 	log.Info(makeVersionString())
