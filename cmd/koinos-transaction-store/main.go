@@ -32,6 +32,8 @@ const (
 	amqpOption       = "amqp"
 	instanceIDOption = "instance-id"
 	logLevelOption   = "log-level"
+	logDirOption     = "log-dir"
+	logColorOption   = "log-color"
 	resetOption      = "reset"
 	jobsOption       = "jobs"
 	versionOption    = "version"
@@ -42,6 +44,7 @@ const (
 	amqpDefault       = "amqp://guest:guest@localhost:5672/"
 	instanceIDDefault = ""
 	logLevelDefault   = "info"
+	logColorDefault   = false
 	resetDefault      = false
 )
 
@@ -49,7 +52,6 @@ const (
 	trxStoreRPC = "transaction_store"
 	blockAccept = "koinos.block.accept"
 	appName     = "transaction_store"
-	logDir      = "logs"
 )
 
 // Version display values
@@ -70,7 +72,9 @@ func main() {
 	amqp := flag.StringP(amqpOption, "a", "", "AMQP server URL")
 	reset := flag.BoolP("reset", "r", false, "Reset the database")
 	instanceID := flag.StringP(instanceIDOption, "i", instanceIDDefault, "The instance ID to identify this service")
-	logLevel := flag.StringP(logLevelOption, "l", logLevelDefault, "The log filtering level (debug, info, warn, error)")
+	logLevel := flag.StringP(logLevelOption, "l", logLevelDefault, "The log filtering level (debug, info, warning, error)")
+	logDir := flag.String(logDirOption, "", "The logging directory")
+	logColor := flag.Bool(logColorOption, logColorDefault, "Log color toggle")
 	jobs := flag.IntP(jobsOption, "j", jobsDefault, "Number of RPC jobs to run")
 	version := flag.BoolP(versionOption, "v", false, "Print version and exit")
 
@@ -91,15 +95,17 @@ func main() {
 
 	*amqp = util.GetStringOption(amqpOption, amqpDefault, *amqp, yamlConfig.TransactionStore, yamlConfig.Global)
 	*logLevel = util.GetStringOption(logLevelOption, logLevelDefault, *logLevel, yamlConfig.TransactionStore, yamlConfig.Global)
+	*logDir = util.GetStringOption(logDirOption, *logDir, *logDir, yamlConfig.TransactionStore, yamlConfig.Global)
+	*logColor = util.GetBoolOption(logColorOption, logColorDefault, *logColor, yamlConfig.TransactionStore, yamlConfig.Global)
 	*instanceID = util.GetStringOption(instanceIDOption, util.GenerateBase58ID(5), *instanceID, yamlConfig.TransactionStore, yamlConfig.Global)
 	*reset = util.GetBoolOption(resetOption, resetDefault, *reset, yamlConfig.TransactionStore, yamlConfig.Global)
 	*jobs = util.GetIntOption(jobsOption, jobsDefault, *jobs, yamlConfig.TransactionStore, yamlConfig.Global)
 
-	appID := fmt.Sprintf("%s.%s", appName, *instanceID)
+	if len(*logDir) > 0 && !path.IsAbs(*logDir) {
+		*logDir = path.Join(util.GetAppDir(baseDir, appName), *logDir)
+	}
 
-	// Initialize logger
-	logFilename := path.Join(util.GetAppDir(baseDir, appName), logDir, appName+".log")
-	err = log.InitLogger(*logLevel, false, logFilename, appID)
+	err = log.InitLogger(appName, *instanceID, *logLevel, *logDir, *logColor)
 	if err != nil {
 		panic(fmt.Sprintf("Invalid log-level: %s. Please choose one of: debug, info, warn, error", *logLevel))
 	}
