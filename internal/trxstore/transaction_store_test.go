@@ -3,14 +3,13 @@ package trxstore
 import (
 	"bytes"
 	"errors"
-	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/dgraph-io/badger/v3"
 
-	"github.com/koinos/koinos-proto-golang/koinos"
-	"github.com/koinos/koinos-proto-golang/koinos/protocol"
+	"github.com/koinos/koinos-proto-golang/v2/koinos"
+	"github.com/koinos/koinos-proto-golang/v2/koinos/protocol"
 )
 
 const (
@@ -26,7 +25,7 @@ func NewBackend(backendType int) TransactionStoreBackend {
 	case MapBackendType:
 		backend = NewMapBackend()
 	case BadgerBackendType:
-		dirname, err := ioutil.TempDir(os.TempDir(), "trxstore-test-*")
+		dirname, err := os.MkdirTemp(os.TempDir(), "trxstore-test-*")
 		if err != nil {
 			panic("unable to create temp directory")
 		}
